@@ -89,12 +89,6 @@ class Gauss:
 
         return v
 
-    def extended(self):
-        """
-        :return:
-        """
-        pass
-
 
 class Simplex:
     """
@@ -133,19 +127,19 @@ class Method:
         self.cfg = cfg
 
     def nulling(self):
-        beam = []
+        flux = []
         A = Matrix(self.cfg["path_mrx"]).get()
         for i in range(A.shape[0]):
             for j in range(A.shape[1]):
                 B = A.copy()
                 B[i, j] = 0
                 W = FBA(self.cfg).esm(B)
-                beam.append(W["x"])
-        return beam
+                flux.append(W["x"])
+        return flux
 
     def view_psa(self):
-        beam = self.nulling()
-        fba_psa = PCA(n_components=2).fit_transform(beam)
+        flux = self.nulling()
+        fba_psa = PCA(n_components=2).fit_transform(flux)
         plt.scatter(fba_psa[:, 0], fba_psa[:, 1], color="g")
         plt.show()
 
