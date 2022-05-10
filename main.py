@@ -4,6 +4,9 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 from configs import cfg
 
+import bokeh.models as bm, bokeh.plotting as pl
+from bokeh.io import output_notebook
+
 
 class Matrix:
     """
@@ -113,7 +116,7 @@ class FBA:
         self.cfg = cfg
 
     def esm(self, A):
-        v = Gauss(A).zero_right()
+        v = Gauss(A).zero_right()*(-1)
         W = Simplex(v, self.cfg["bnd"]).opt()
         return W
 
@@ -125,25 +128,85 @@ class Method:
 
     def __init__(self, cfg):
         self.cfg = cfg
+        self.FBA = FBA(self.cfg)
+        self.A = Matrix(self.cfg["path_mrx"]).get()
 
     def nulling(self):
         flux = []
-        A = Matrix(self.cfg["path_mrx"]).get()
-        for i in range(A.shape[0]):
-            for j in range(A.shape[1]):
-                B = A.copy()
+        point = []
+
+        for i in range(self.A.shape[0]):
+            for j in range(self.A.shape[1]):
+                if self.A[i, j] == 0:
+                    continue
+                B = self.A.copy()
                 B[i, j] = 0
-                W = FBA(self.cfg).esm(B)
+                W = self.FBA.esm(B)
                 flux.append(W["x"])
-        return flux
+                point.append(f'{i} {j}')
+        return [flux, point]
 
     def view_psa(self):
-        flux = self.nulling()
+        flux = self.nulling()[0]
+        flux.append(self.FBA.esm(self.A)['x'])
         fba_psa = PCA(n_components=2).fit_transform(flux)
         plt.scatter(fba_psa[:, 0], fba_psa[:, 1], color="g")
         plt.show()
 
 
+def draw_vectors(x, y, radius=10, alpha=0.25, color='blue',
+                 width=1000, height=800, show=True, **kwargs):
+    """ draws an interactive plot for data points with auxilirary info on hover """
+    if isinstance(color, str): color = [color] * len(x)
+    data_source = bm.ColumnDataSource({ 'x' : x, 'y' : y, 'color': color, **kwargs })
+    fig = pl.figure(active_scroll='wheel_zoom', width=width, height=height)
+    fig.scatter('x', 'y', size=radius, color='color', alpha=alpha, source=data_source)
+
+    fig.add_tools(bm.HoverTool(tooltips=[(key, "@" + key) for key in kwargs.keys()]))
+    if show: pl.show(fig)
+    return fig
+
+
 if __name__ == "__main__":
 
-    Method(cfg.config_fba).view_psa()
+    retw = Method(cfg.config_fba).nulling()
+    retw[1].append('orig')
+
+    A = Matrix(cfg.config_fba['path_mrx']).get()
+    orig_v = FBA(cfg.config_fba).esm(A)['x']
+
+
+    # ---------- experiment ---------->
+    # powfe = []
+    # neighbors = np.sqrt(np.sum((retw[0] - orig_v)**2, 1)) <= 0.0000000001
+    # index_neighbors = np.array(np.where(neighbors == True))[0]
+    # for i in index_neighbors:
+    #     powfe.append(retw[1][i])
+    #
+    # retw[0].append(orig_v)
+    #
+    # print(powfe)
+    # print(len(powfe))
+    #
+    # for i in powfe:
+    #     j = int(i.split()[0])
+    #     k = int(i.split()[1])
+    #     A[j, k] = 0
+    #
+    # print(A)
+    #
+    # test_with_zero = FBA(cfg.config_fba).esm(A)['x']
+    # retw[0].append(test_with_zero)
+    # retw[1].append('!!!')
+    # <---------- !!! ----------
+
+
+    retw[0].append(orig_v)
+
+    fba_psa = PCA(n_components=2).fit_transform(retw[0])
+    draw_vectors(fba_psa[:, 0], fba_psa[:, 1], token=retw[1], color = 'green')
+    output_notebook()
+
+
+    # plt.scatter(fba_psa[:, 0], fba_psa[:, 1], color="g")
+    # plt.show()
