@@ -136,14 +136,11 @@ class Method:
         point = []
 
         for i in range(self.A.shape[0]):
-            for j in range(self.A.shape[1]):
-                if self.A[i, j] == 0:
-                    continue
-                B = self.A.copy()
-                B[i, j] = 0
-                W = self.FBA.esm(B)
-                flux.append(W["x"])
-                point.append(f'{i} {j}')
+            B = self.A.copy()
+            B[i] *= 0
+            W = self.FBA.esm(B)
+            flux.append(W["x"])
+            point.append(f'{i}')
         return [flux, point]
 
     def view_psa(self):
@@ -181,17 +178,15 @@ if __name__ == "__main__":
     # neighbors = np.sqrt(np.sum((retw[0] - orig_v)**2, 1)) <= 0.0000000001
     # index_neighbors = np.array(np.where(neighbors == True))[0]
     # for i in index_neighbors:
-    #     powfe.append(retw[1][i])
+    #     powfe.append(int(retw[1][i]))
     #
     # retw[0].append(orig_v)
     #
     # print(powfe)
     # print(len(powfe))
+    # print(A)
     #
-    # for i in powfe:
-    #     j = int(i.split()[0])
-    #     k = int(i.split()[1])
-    #     A[j, k] = 0
+    # A = np.delete(A, powfe, axis=0)
     #
     # print(A)
     #
